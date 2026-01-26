@@ -97,22 +97,22 @@ def cli():
         setup_logging(level="warning")
 
     # Handle --serve flag		
-    if args_dict.get("serve"):
+    if args.get("serve"):
         from whisperx.server import start_server
         start_server(
-            host=args_dict["host"],
-            port=args_dict["port"],
-            workers=args_dict["workers"],
-            log_level=args_dict["log_level"]
+            host=args["host"],
+            port=args["port"],
+            workers=args["workers"],
+            log_level=args["log_level"]
         )
     else:
         # Run transcription task
-        if not args_dict.get("audio"):
+        if not args.get("audio"):
             parser.error("the following arguments are required: audio")
 
         from whisperx.transcribe import transcribe_task
 
-        transcribe_task(args_dict, parser)
+        transcribe_task(args, parser)
 
 
 if __name__ == "__main__":
