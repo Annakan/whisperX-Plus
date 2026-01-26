@@ -14,6 +14,7 @@ logger = get_logger(__name__)
 
 AudioFile = Union[Text, Path, IOBase, Mapping]
 
+torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
 
 class Silero(Vad):
     # check again default values

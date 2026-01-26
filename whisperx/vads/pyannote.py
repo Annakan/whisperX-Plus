@@ -17,6 +17,7 @@ from whisperx.log_utils import get_logger
 
 logger = get_logger(__name__)
 
+torch.hub._validate_not_a_forked_repo=lambda a,b,c: True
 
 def load_vad_model(device, vad_onset=0.500, vad_offset=0.363, use_auth_token=None, model_fp=None):
     model_dir = torch.hub._get_torch_home()

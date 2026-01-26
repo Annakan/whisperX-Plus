@@ -5,6 +5,7 @@ from typing import Annotated, Any, Literal, Optional
 import torch
 from fastapi import Form
 from pydantic import BaseModel, Field, field_validator
+from typing import Annotated
 
 from whisperx.utils import LANGUAGES, TO_LANGUAGE_CODE
 
@@ -12,9 +13,7 @@ from whisperx.utils import LANGUAGES, TO_LANGUAGE_CODE
 LogLevel = Literal["debug", "info", "warning", "error", "critical"]
 
 
-class TranscribeRequest(BaseModel):
-    audio: list[str] = Field(default_factory=list, description="Audio file path(s) to transcribe")
-
+class TranscribeParams(BaseModel):
     # Model parameters
     model: str = Field(default="small", description="Name of the Whisper model to use")
     model_cache_only: bool = Field(
@@ -138,7 +137,6 @@ class TranscribeRequest(BaseModel):
     @classmethod
     def as_form(
         cls,
-        audio: Annotated[list[str], Form()] = [],
         model: Annotated[str, Form()] = "small",
         model_cache_only: Annotated[bool, Form()] = False,
         model_dir: Annotated[Optional[str], Form()] = None,
@@ -187,9 +185,8 @@ class TranscribeRequest(BaseModel):
         threads: Annotated[int, Form()] = 0,
         hf_token: Annotated[Optional[str], Form()] = None,
         print_progress: Annotated[bool, Form()] = False,
-    ) -> "TranscribeRequest":
+    ) -> "TranscribeParams":
         return cls(
-            audio=audio,
             model=model,
             model_cache_only=model_cache_only,
             model_dir=model_dir,
@@ -239,6 +236,10 @@ class TranscribeRequest(BaseModel):
             hf_token=hf_token,
             print_progress=print_progress,
         )
+
+
+class TranscribeRequest(TranscribeParams):
+    audio: list[str] = Field(default_factory=list, description="Audio file path(s) to transcribe")
 
 
 class ServeRequest(BaseModel):

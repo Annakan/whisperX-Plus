@@ -9,7 +9,8 @@ requires-python = ">=3.9, <3.14"
 license = { text = "BSD-2-Clause" }
 
 dependencies = [
-    "ctranslate2>=4.5.0",
+    "ctranslate2>=4.6.0",
+
     "faster-whisper>=1.1.1",
     "nltk>=3.9.1",
     # Restrict numpy, onnxruntime, pandas, av to be compatible with Python 3.9
@@ -21,12 +22,15 @@ dependencies = [
     "pyannote-audio>=3.3.2,<4.0.0",
     "torch~=2.8.0",
     "torchaudio~=2.8.0",
-    "transformers>=4.48.0",
+    "transformers>=4.48.0,<5",
     "triton>=3.3.0; sys_platform == 'linux' and platform_machine == 'x86_64'", # only install triton on x86_64 Linux
     "fastapi>=0.115.0",
     "typer>=0.21.1",
+    "typer-slim", # should not be needed since typer but something happens when changing transformers version
     "uvicorn[standard]>=0.30.0",
     "python-multipart>=0.0.9",
+    "noisereduce>=3.0.3",
+    "requests", # needed by faster-whisper in old version revise when faster-whisper updated
 ]
 
 

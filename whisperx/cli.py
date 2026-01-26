@@ -4,7 +4,7 @@ from typing import Literal, Optional
 
 import typer
 
-from whisperx.api_models import ServeRequest, TranscribeRequest
+from whisperx.api_models import ServeRequest, TranscribeParams
 from whisperx.log_utils import setup_logging
 
 app = typer.Typer(add_completion=True)
@@ -36,7 +36,12 @@ def serve(
 @app.command("transcribe")
 def transcribe(
     audio: list[str] = typer.Argument(..., help="Audio file(s) to transcribe"),
-    model: str = typer.Option("small", "--model", help="Name of the Whisper model to use"),
+    model: str = typer.Option(
+        "small",
+        "--model",
+        envvar="W_MODEL",
+        help="Name of the Whisper model to use",
+    ),
     model_cache_only: bool = typer.Option(
         False,
         "--model_cache_only",
@@ -73,7 +78,12 @@ def transcribe(
         "--task",
         help="Task to perform",
     ),
-    language: Optional[str] = typer.Option(None, "--language", help="Language spoken in the audio"),
+    language: Optional[str] = typer.Option(
+        None,
+        "--language",
+        envvar="W_LANG",
+        help="Language spoken in the audio",
+    ),
     align_model: Optional[str] = typer.Option(None, "--align_model", help="Alignment model name"),
     interpolate_method: Literal["nearest", "linear", "ignore"] = typer.Option(
         "nearest",
@@ -153,12 +163,11 @@ def transcribe(
 
     from whisperx.transcribe import run_transcription
 
-    request = TranscribeRequest(
-        audio=audio,
+    params = TranscribeParams(
         model=model,
         model_cache_only=model_cache_only,
         model_dir=model_dir,
-        device=device or TranscribeRequest().device,
+        device=device or TranscribeParams().device,
         device_index=device_index,
         batch_size=batch_size,
         compute_type=compute_type,
@@ -205,7 +214,7 @@ def transcribe(
         print_progress=print_progress,
     )
 
-    run_transcription(request)
+    run_transcription(params, audio)
 
 
 def main() -> None:

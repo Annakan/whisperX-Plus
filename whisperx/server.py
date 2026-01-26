@@ -12,7 +12,7 @@ from typing import Optional
 from fastapi import Depends, FastAPI, File, UploadFile, HTTPException
 from pydantic import BaseModel
 
-from whisperx.api_models import TranscribeRequest
+from whisperx.api_models import TranscribeParams
 
 
 # Create FastAPI app
@@ -51,7 +51,7 @@ async def health():
 @app.post("/transcribe", response_model=TranscriptionResponse)
 async def serve_transcribe(
     audio: UploadFile = File(..., description="Audio file to transcribe"),
-    request: TranscribeRequest = Depends(TranscribeRequest.as_form),
+    params: TranscribeParams = Depends(TranscribeParams.as_form),
 ):
     """
     Transcribe an audio file using WhisperX.
@@ -72,10 +72,8 @@ async def serve_transcribe(
         try:
             from whisperx.transcribe import run_transcription
 
-            request = request.model_copy(update={"audio": [str(audio_path)]})
-            request = request.model_copy(update={"output_dir": request.output_dir or temp_dir})
-
-            results = run_transcription(request)
+            params = params.model_copy(update={"output_dir": params.output_dir or temp_dir})
+            results = run_transcription(params, [str(audio_path)])
             if not results:
                 raise HTTPException(status_code=500, detail="Transcription completed but no result returned")
             return TranscriptionResponse(**results[0])

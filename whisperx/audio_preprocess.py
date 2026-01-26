@@ -111,7 +111,7 @@ def preprocess_audio(
         out_int16 = np.clip(normalized * 32768, -32768, 32767).astype(np.int16)
         write(output_path, rate, out_int16)
 
-        # debug_folder = "/home/rafaelgalle/Downloads/audio_debug"
+        # debug_folder = "~/Downloads/audio_debug"
         # os.makedirs(debug_folder, exist_ok=True)
         # # shutil.copy(temp1, f"{debug_folder}/stage1.wav")
         # # shutil.copy(temp2, f"{debug_folder}/stage2.wav")

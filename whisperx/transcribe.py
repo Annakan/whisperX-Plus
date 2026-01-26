@@ -14,51 +14,51 @@ from whisperx.diarize import DiarizationPipeline, assign_word_speakers
 from whisperx.schema import AlignedTranscriptionResult, TranscriptionResult
 from whisperx.utils import get_writer
 from whisperx.log_utils import get_logger
-from whisperx.api_models import TranscribeRequest
+from whisperx.api_models import TranscribeParams
 
 logger = get_logger(__name__)
 
 
-def run_transcription(request: TranscribeRequest) -> list[dict[str, Any]]:
-    model_name = request.model
-    batch_size = request.batch_size
-    model_dir = request.model_dir
-    model_cache_only = request.model_cache_only
-    output_dir = request.output_dir
-    output_format = request.output_format
-    device = request.device
-    device_index = request.device_index
-    compute_type = request.compute_type
-    verbose = request.verbose
+def run_transcription(params: TranscribeParams, audio_paths: list[str]) -> list[dict[str, Any]]:
+    model_name = params.model
+    batch_size = params.batch_size
+    model_dir = params.model_dir
+    model_cache_only = params.model_cache_only
+    output_dir = params.output_dir
+    output_format = params.output_format
+    device = params.device
+    device_index = params.device_index
+    compute_type = params.compute_type
+    verbose = params.verbose
 
     os.makedirs(output_dir, exist_ok=True)
 
-    align_model_name = request.align_model
-    interpolate_method = request.interpolate_method
-    no_align = request.no_align
-    task = request.task
+    align_model_name = params.align_model
+    interpolate_method = params.interpolate_method
+    no_align = params.no_align
+    task = params.task
     if task == "translate":
         no_align = True
 
-    return_char_alignments = request.return_char_alignments
+    return_char_alignments = params.return_char_alignments
 
-    hf_token = request.hf_token
-    vad_method = request.vad_method
-    vad_onset = request.vad_onset
-    vad_offset = request.vad_offset
-    chunk_size = request.chunk_size
+    hf_token = params.hf_token
+    vad_method = params.vad_method
+    vad_onset = params.vad_onset
+    vad_offset = params.vad_offset
+    chunk_size = params.chunk_size
 
-    diarize = request.diarize
-    min_speakers = request.min_speakers
-    max_speakers = request.max_speakers
-    diarize_model_name = request.diarize_model
-    print_progress = request.print_progress
-    return_speaker_embeddings = request.speaker_embeddings
+    diarize = params.diarize
+    min_speakers = params.min_speakers
+    max_speakers = params.max_speakers
+    diarize_model_name = params.diarize_model
+    print_progress = params.print_progress
+    return_speaker_embeddings = params.speaker_embeddings
 
     if return_speaker_embeddings and not diarize:
         warnings.warn("--speaker_embeddings has no effect without --diarize")
 
-    language = request.language
+    language = params.language
     if model_name.endswith(".en") and language != "en":
         if language is not None:
             warnings.warn(
@@ -67,45 +67,45 @@ def run_transcription(request: TranscribeRequest) -> list[dict[str, Any]]:
         language = "en"
     align_language = language if language is not None else "en"
 
-    temperature = request.temperature
-    increment = request.temperature_increment_on_fallback
+    temperature = params.temperature
+    increment = params.temperature_increment_on_fallback
     if increment is not None:
         temperatures = tuple(np.arange(temperature, 1.0 + 1e-6, increment))
     else:
         temperatures = [temperature]
 
     faster_whisper_threads = 4
-    if request.threads > 0:
-        torch.set_num_threads(request.threads)
-        faster_whisper_threads = request.threads
+    if params.threads > 0:
+        torch.set_num_threads(params.threads)
+        faster_whisper_threads = params.threads
 
     asr_options = {
-        "beam_size": request.beam_size,
-        "patience": request.patience,
-        "length_penalty": request.length_penalty,
+        "beam_size": params.beam_size,
+        "patience": params.patience,
+        "length_penalty": params.length_penalty,
         "temperatures": temperatures,
-        "compression_ratio_threshold": request.compression_ratio_threshold,
-        "log_prob_threshold": request.logprob_threshold,
-        "no_speech_threshold": request.no_speech_threshold,
+        "compression_ratio_threshold": params.compression_ratio_threshold,
+        "log_prob_threshold": params.logprob_threshold,
+        "no_speech_threshold": params.no_speech_threshold,
         "condition_on_previous_text": False,
-        "initial_prompt": request.initial_prompt,
-        "hotwords": request.hotwords,
-        "suppress_tokens": [int(x) for x in request.suppress_tokens.split(",")],
-        "suppress_numerals": request.suppress_numerals,
+        "initial_prompt": params.initial_prompt,
+        "hotwords": params.hotwords,
+        "suppress_tokens": [int(x) for x in params.suppress_tokens.split(",")],
+        "suppress_numerals": params.suppress_numerals,
     }
 
     writer = get_writer(output_format, output_dir)
     word_options = ["highlight_words", "max_line_count", "max_line_width"]
     if no_align:
         for option in word_options:
-            if getattr(request, option):
+            if getattr(params, option):
                 raise ValueError(f"--{option} not possible with --no_align")
-    if request.max_line_count and not request.max_line_width:
+    if params.max_line_count and not params.max_line_width:
         warnings.warn("--max_line_count has no effect without --max_line_width")
     writer_args = {
-        "highlight_words": request.highlight_words,
-        "max_line_count": request.max_line_count,
-        "max_line_width": request.max_line_width,
+        "highlight_words": params.highlight_words,
+        "max_line_count": params.max_line_count,
+        "max_line_width": params.max_line_width,
     }
 
     # Part 1: VAD & ASR Loop
@@ -130,7 +130,7 @@ def run_transcription(request: TranscribeRequest) -> list[dict[str, Any]]:
     )
 
     audio_cache: Optional[np.ndarray] = None
-    for audio_path in request.audio:
+    for audio_path in audio_paths:
         audio_cache = load_audio(audio_path)
         logger.info("Performing transcription...")
         result: TranscriptionResult = model.transcribe(
@@ -234,12 +234,17 @@ def transcribe_task(args: dict, parser: argparse.ArgumentParser):
         parser: argparse.ArgumentParser object.
     """
     try:
-        request = TranscribeRequest(**args)
+        audio_paths = args.get("audio")
+        request_args = {k: v for k, v in args.items() if k != "audio"}
+        params = TranscribeParams(**request_args)
     except Exception as exc:
         parser.error(str(exc))
         return
 
     try:
-        run_transcription(request)
+        if not audio_paths:
+            parser.error("the following arguments are required: audio")
+            return
+        run_transcription(params, audio_paths)
     except ValueError as exc:
         parser.error(str(exc))
