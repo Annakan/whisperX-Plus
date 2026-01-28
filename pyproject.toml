@@ -9,28 +9,28 @@ requires-python = ">=3.12, <3.14"
 license = { text = "BSD-2-Clause" }
 
 dependencies = [
-    "ctranslate2>=4.6.0",
+  "ctranslate2>=4.6.0",
 
-    "faster-whisper>=1.1.1",
-    "nltk>=3.9.1",
-    # Restrict numpy, onnxruntime, pandas, av to be compatible with Python 3.9
-    "numpy>=2.0.2,<2.1.0; python_version <'3.13'",
-    "onnxruntime>=1.19,<1.20.0; python_version <'3.10'",
-    "pandas>=2.2.3,<2.3.0",
-    "av<16.0.0",
-    "numpy>=2.1.0,<2.3.0; python_version >='3.13'",
-    "pyannote-audio>=3.3.2,<4.0.0",
-    "torch~=2.8.0",
-    "torchaudio~=2.8.0",
-    "transformers>=4.48.0,<5",
-    "triton>=3.3.0; sys_platform == 'linux' and platform_machine == 'x86_64'", # only install triton on x86_64 Linux
-    "fastapi>=0.115.0",
-    "typer>=0.21.1",
-    "typer-slim", # should not be needed since typer but something happens when changing transformers version
-    "uvicorn[standard]>=0.30.0",
-    "python-multipart>=0.0.9",
-    "noisereduce>=3.0.3",
-    "requests", # needed by faster-whisper in old version revise when faster-whisper updated
+  "faster-whisper>=1.1.1",
+  "nltk>=3.9.1",
+  # Restrict numpy, onnxruntime, pandas, av to be compatible with Python 3.9
+  "numpy>=2.0.2,<2.1.0; python_version <'3.13'",
+  "onnxruntime>=1.19,<1.20.0; python_version <'3.10'",
+  "pandas>=2.2.3,<2.3.0",
+  "av<16.0.0",
+  "numpy>=2.1.0,<2.3.0; python_version >='3.13'",
+  "pyannote-audio>=3.3.2,<4.0.0",
+  "torch~=2.8.0",
+  "torchaudio~=2.8.0",
+  "transformers>=4.48.0,<5",
+  "triton>=3.3.0; sys_platform == 'linux' and platform_machine == 'x86_64'", # only install triton on x86_64 Linux
+  "fastapi>=0.115.0",
+  "typer>=0.21.1",
+  "typer-slim",                                                              # should not be needed since typer but something happens when changing transformers version
+  "uvicorn[standard]>=0.30.0",
+  "python-multipart>=0.0.9",
+  "noisereduce>=3.0.3",
+  "requests",                                                                # needed by faster-whisper in old version revise when faster-whisper updated
 ]
 
 
@@ -58,9 +58,7 @@ torchaudio = [
   { index = "pytorch-cpu", marker = "platform_machine != 'x86_64' and sys_platform != 'darwin'" },
   { index = "pytorch", marker = "platform_machine == 'x86_64' and sys_platform != 'darwin'" },
 ]
-triton = [
-  { index = "pytorch", marker = "sys_platform == 'linux'" },
-]
+triton = [{ index = "pytorch", marker = "sys_platform == 'linux'" }]
 
 [[tool.uv.index]]
 name = "pytorch"
@@ -72,7 +70,4 @@ name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
 [dependency-groups]
-dev = [
-    "pydevd-pycharm>=252.26830.99",
-    "pytest>=8.4.2",
-]
+dev = ["pydevd-pycharm~=253.29346.308", "pytest>=8.4.2"]

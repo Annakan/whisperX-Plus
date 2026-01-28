@@ -21,6 +21,10 @@ from whisperx.utils import get_writer
 logger = get_logger(__name__)
 
 
+import pydevd_pycharm
+pydevd_pycharm.settrace('localhost', port=7000, stdout_to_server=True, stderr_to_server=True)
+
+
 def run_transcription(params: TranscribeParams, audio_paths: list[str]) -> list[dict[str, Any]]:
     model_name = params.model
     batch_size = params.batch_size

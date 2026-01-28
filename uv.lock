@@ -1633,9 +1633,9 @@ wheels = [
 
 [[package]]
 name = "pydevd-pycharm"
-version = "253.30387.25"
+version = "253.29346.308"
 source = { registry = "https://pypi.org/simple" }
-sdist = { url = "https://files.pythonhosted.org/packages/9b/6c/d7f2f99e92730f01eaae8d63277f647b136cfdbba9664930d5b769db8537/pydevd_pycharm-253.30387.25.tar.gz", hash = "sha256:caddf08c48e3a79741c34094fddb0b8a1c71aba894ea42a21921b5f6127c4f79", size = 7635115, upload-time = "2026-01-15T17:20:11.674Z" }
+sdist = { url = "https://files.pythonhosted.org/packages/f5/fe/6ad472a34980c383bce592a274e83d33d170faa1c0b63b1b9a096098f5c8/pydevd_pycharm-253.29346.308.tar.gz", hash = "sha256:eb6d35f9d6d05b10831a7c486eb46f164f9111e83d45a2fbc0ae52c32729d786", size = 7635278, upload-time = "2026-01-12T12:17:59.56Z" }
 
 [[package]]
 name = "pygments"
@@ -2749,7 +2749,7 @@ requires-dist = [
 
 [package.metadata.requires-dev]
 dev = [
-    { name = "pydevd-pycharm", specifier = ">=252.26830.99" },
+    { name = "pydevd-pycharm", specifier = "~=253.29346.308" },
     { name = "pytest", specifier = ">=8.4.2" },
 ]
 

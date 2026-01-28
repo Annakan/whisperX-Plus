@@ -165,7 +165,7 @@ def transcribe(
         help="Segment resolution",
     ),
     threads: int = typer.Option(0, "--threads", help="Torch threads"),
-    hf_token: Optional[str] = typer.Option(None, "--hf_token", help="Hugging Face token"),
+    hf_token: Optional[str] = typer.Option(None, "--hf_token", help="Hugging Face token", envvar="HF_TOKEN"),
     print_progress: bool = typer.Option(False, "--print_progress", help="Print progress"),
 ):
     if log_level is not None:
