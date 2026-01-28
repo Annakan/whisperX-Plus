@@ -66,6 +66,22 @@ class TranscribeParams(BaseModel):
     vad_offset: float = Field(default=0.363, description="Offset threshold for VAD")
     chunk_size: int = Field(default=30, description="Chunk size for merging VAD segments")
 
+    # preprocess params
+    preprocess: int = Field(
+        default=0,
+        ge=0,
+        le=4,
+        description="Audio preprocessing level: 0=None, 1=Sanitize, 2=+Filter, 3=+ReduceNoise, 4=+Normalize",
+    )
+    stationary_nr: bool = Field(
+        default=True,
+        description="Use stationary noise reduction (faster, works well for constant background noise)",
+    )
+    target_dBFS: float = Field(default=-18.0, description="Target dBFS for audio normalization")
+    lowpass_freq: int = Field(default=8000, description="Lowpass filter frequency in Hz")
+    highpass_freq: int = Field(default=45, description="Highpass filter frequency in Hz")
+    prop_decrease: float = Field(default=0.3, description="Proportion to reduce noise by (0.0 to 1.0)")
+
     # diarization params
     diarize: bool = Field(default=False, description="Apply diarization")
     min_speakers: Optional[int] = Field(default=None, description="Minimum number of speakers")
@@ -158,6 +174,12 @@ class TranscribeParams(BaseModel):
         vad_onset: Annotated[float, Form()] = 0.500,
         vad_offset: Annotated[float, Form()] = 0.363,
         chunk_size: Annotated[int, Form()] = 30,
+        preprocess: Annotated[int, Form()] = 0,
+        stationary_nr: Annotated[bool, Form()] = True,
+        target_dBFS: Annotated[float, Form()] = -18.0,
+        lowpass_freq: Annotated[int, Form()] = 8000,
+        highpass_freq: Annotated[int, Form()] = 45,
+        prop_decrease: Annotated[float, Form()] = 0.3,
         diarize: Annotated[bool, Form()] = False,
         min_speakers: Annotated[Optional[int], Form()] = None,
         max_speakers: Annotated[Optional[int], Form()] = None,
@@ -208,6 +230,12 @@ class TranscribeParams(BaseModel):
             vad_onset=vad_onset,
             vad_offset=vad_offset,
             chunk_size=chunk_size,
+            preprocess=preprocess,
+            stationary_nr=stationary_nr,
+            target_dBFS=target_dBFS,
+            lowpass_freq=lowpass_freq,
+            highpass_freq=highpass_freq,
+            prop_decrease=prop_decrease,
             diarize=diarize,
             min_speakers=min_speakers,
             max_speakers=max_speakers,

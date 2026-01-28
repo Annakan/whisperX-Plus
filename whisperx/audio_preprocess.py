@@ -1,12 +1,16 @@
 """Audio preprocessing utilities."""
-import os
+import shutil
 import subprocess
+import tempfile
+
 import numpy as np
+import noisereduce as nr
 from scipy.io import wavfile
 from scipy.io.wavfile import write
-import noisereduce as nr
-import tempfile
-import shutil
+
+from whisperx.log_utils import get_logger
+
+logger = get_logger(__name__)
 
 def sanitize_audio(input_path: str, sanitized_path: str):
     """Convert audio to mono, 16kHz, pcm_s16le using ffmpeg."""
@@ -20,7 +24,7 @@ def sanitize_audio(input_path: str, sanitized_path: str):
         sanitized_path
     ]
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print(f"DEBUG --> Sanitization completed: {sanitized_path}")
+    logger.debug(f"Sanitization completed: {sanitized_path}")
 
 
 def apply_filters(input_path: str, filtered_path: str, highpass_freq: int, lowpass_freq: int):
@@ -33,7 +37,7 @@ def apply_filters(input_path: str, filtered_path: str, highpass_freq: int, lowpa
         filtered_path
     ]
     subprocess.run(cmd, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-    print(f"DEBUG --> Applied filters: {filtered_path}")
+    logger.debug(f"Applied filters: {filtered_path}")
 
 
 def reduce_noise(input_path: str, prop_decrease: float, stationary: bool):
@@ -47,7 +51,7 @@ def reduce_noise(input_path: str, prop_decrease: float, stationary: bool):
         prop_decrease=prop_decrease,
         stationary=stationary,
     )
-    print("DEBUG --> Noise removed")
+    logger.debug("Noise reduction completed")
     return rate, reduced
 
 
@@ -56,19 +60,19 @@ def normalize_audio(audio_data: np.ndarray, target_dBFS: float):
     rms = np.sqrt(np.mean(audio_data**2))
     target_rms = 10 ** (target_dBFS / 20)
     gain = target_rms / (rms + 1e-9)
-    print("DEBUG --> Audio normalized")
+    logger.debug("Audio normalization completed")
     return audio_data * gain
 
 
 def preprocess_audio(
     input_path: str,
     output_path: str,
-    preprocess_level: int = 4,
+    preprocess_level: int = 0,
     highpass_freq: int = 45,
     lowpass_freq: int = 8000,
-    prop_decrease: float = 1.0,
-    stationary: bool = False,
-    target_dBFS: float = -20.0,
+    prop_decrease: float = 0.3,
+    stationary: bool = True,
+    target_dBFS: float = -18.0,
 ):
     """
     Performs audio cleanup to the specified level.
@@ -111,12 +115,4 @@ def preprocess_audio(
         out_int16 = np.clip(normalized * 32768, -32768, 32767).astype(np.int16)
         write(output_path, rate, out_int16)
 
-        # debug_folder = "~/Downloads/audio_debug"
-        # os.makedirs(debug_folder, exist_ok=True)
-        # # shutil.copy(temp1, f"{debug_folder}/stage1.wav")
-        # # shutil.copy(temp2, f"{debug_folder}/stage2.wav")
-        # # shutil.copy(temp3, f"{debug_folder}/stage3.wav")
-        # shutil.copy(output_path, f"{debug_folder}/final_output_{output_path.split('/')[-1].replace('.wav', '')}.wav")
-        # print(f"DEBUG --> Copy files to: {debug_folder}")
-
-        print(f"DEBUG --> Preprocessing complete. File saved in: {output_path}")
+        logger.debug(f"Preprocessing complete. File saved in: {output_path}")

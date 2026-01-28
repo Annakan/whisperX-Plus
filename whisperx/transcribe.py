@@ -1,6 +1,7 @@
 import argparse
 import gc
 import os
+import tempfile
 import warnings
 from typing import Any, Optional
 
@@ -8,13 +9,14 @@ import numpy as np
 import torch
 
 from whisperx.alignment import align, load_align_model
+from whisperx.api_models import TranscribeParams
 from whisperx.asr import load_model
 from whisperx.audio import load_audio
+from whisperx.audio_preprocess import preprocess_audio
 from whisperx.diarize import DiarizationPipeline, assign_word_speakers
+from whisperx.log_utils import get_logger
 from whisperx.schema import AlignedTranscriptionResult, TranscriptionResult
 from whisperx.utils import get_writer
-from whisperx.log_utils import get_logger
-from whisperx.api_models import TranscribeParams
 
 logger = get_logger(__name__)
 
@@ -30,6 +32,13 @@ def run_transcription(params: TranscribeParams, audio_paths: list[str]) -> list[
     device_index = params.device_index
     compute_type = params.compute_type
     verbose = params.verbose
+
+    preprocess_level = params.preprocess
+    stationary_nr = params.stationary_nr
+    target_dBFS = params.target_dBFS
+    lowpass_freq = params.lowpass_freq
+    highpass_freq = params.highpass_freq
+    prop_decrease = params.prop_decrease
 
     os.makedirs(output_dir, exist_ok=True)
 
@@ -129,9 +138,30 @@ def run_transcription(params: TranscribeParams, audio_paths: list[str]) -> list[
         threads=faster_whisper_threads,
     )
 
+    preprocess_temp_dir = tempfile.TemporaryDirectory() if preprocess_level > 0 else None
+    preprocessed_paths: dict[str, str] = {}
+
     audio_cache: Optional[np.ndarray] = None
     for audio_path in audio_paths:
-        audio_cache = load_audio(audio_path)
+        effective_audio_path = audio_path
+        if preprocess_level > 0:
+            preprocessed_filename = os.path.basename(audio_path).rsplit(".", 1)[0] + "_preprocessed.wav"
+            preprocessed_path = os.path.join(preprocess_temp_dir.name, preprocessed_filename)
+            logger.info(f"Preprocessing audio (level {preprocess_level})...")
+            preprocess_audio(
+                input_path=audio_path,
+                output_path=preprocessed_path,
+                preprocess_level=preprocess_level,
+                highpass_freq=highpass_freq,
+                lowpass_freq=lowpass_freq,
+                prop_decrease=prop_decrease,
+                stationary=stationary_nr,
+                target_dBFS=target_dBFS,
+            )
+            effective_audio_path = preprocessed_path
+            preprocessed_paths[audio_path] = preprocessed_path
+
+        audio_cache = load_audio(effective_audio_path)
         logger.info("Performing transcription...")
         result: TranscriptionResult = model.transcribe(
             audio_cache,
@@ -140,7 +170,7 @@ def run_transcription(params: TranscribeParams, audio_paths: list[str]) -> list[
             print_progress=print_progress,
             verbose=verbose,
         )
-        results.append((result, audio_path))
+        results.append((result, audio_path, effective_audio_path))
 
     # Unload Whisper and VAD
     del model
@@ -154,9 +184,9 @@ def run_transcription(params: TranscribeParams, audio_paths: list[str]) -> list[
         align_model, align_metadata = load_align_model(
             align_language, device, model_name=align_model_name
         )
-        for result, audio_path in tmp_results:
+        for result, audio_path, effective_audio_path in tmp_results:
             if len(tmp_results) > 1:
-                input_audio = audio_path
+                input_audio = effective_audio_path
             else:
                 input_audio = audio_cache
 
@@ -180,7 +210,7 @@ def run_transcription(params: TranscribeParams, audio_paths: list[str]) -> list[
                     print_progress=print_progress,
                 )
 
-            results.append((result, audio_path))
+            results.append((result, audio_path, effective_audio_path))
 
         del align_model
         gc.collect()
@@ -201,9 +231,9 @@ def run_transcription(params: TranscribeParams, audio_paths: list[str]) -> list[
             use_auth_token=hf_token,
             device=device,
         )
-        for result, input_audio_path in tmp_results:
+        for result, audio_path, effective_audio_path in tmp_results:
             diarize_result = diarize_model(
-                input_audio_path,
+                effective_audio_path,
                 min_speakers=min_speakers,
                 max_speakers=max_speakers,
                 return_embeddings=return_speaker_embeddings,
@@ -216,13 +246,21 @@ def run_transcription(params: TranscribeParams, audio_paths: list[str]) -> list[
                 speaker_embeddings = None
 
             result = assign_word_speakers(diarize_segments, result, speaker_embeddings)
-            results.append((result, input_audio_path))
+            results.append((result, audio_path, effective_audio_path))
 
     output_results: list[dict[str, Any]] = []
-    for result, audio_path in results:
+    for item in results:
+        if len(item) == 3:
+            result, audio_path, _ = item
+        else:
+            result, audio_path = item
         result["language"] = align_language
         writer(result, audio_path, writer_args)
         output_results.append(result)
+
+    if preprocess_temp_dir is not None:
+        preprocess_temp_dir.cleanup()
+
     return output_results
 
 
