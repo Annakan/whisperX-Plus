@@ -1,0 +1,19 @@
+# Example runplan.yaml for WhisperX Evaluator
+# Copy this file to your run directory and customize
+
+to_process:
+  - AFFSOC_09_SP1
+
+base_args:
+  language: fr
+  device: cuda
+  compute_type: float16
+  diarize: true
+  vad_method: pyannote
+  hf-token:
+
+varying_args:
+  model: [tiny, medium, large-v3]
+  beam_size: [5, 7, 9]
+  patience: [1, 3]
+  preprocess: [0, 1, 4]

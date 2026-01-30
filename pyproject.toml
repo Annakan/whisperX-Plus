@@ -36,6 +36,7 @@ dependencies = [
 
 [project.scripts]
 whisperx = "whisperx.cli:app"
+whisperx-eval = "evaluator.cli:app"
 
 [build-system]
 requires = ["setuptools"]
@@ -45,7 +46,7 @@ include-package-data = true
 
 [tool.setuptools.packages.find]
 where = ["."]
-include = ["whisperx*"]
+include = ["whisperx*", "evaluator*"]
 
 [tool.uv.sources]
 torch = [
@@ -69,5 +70,15 @@ explicit = true
 name = "pytorch-cpu"
 url = "https://download.pytorch.org/whl/cpu"
 explicit = true
+
 [dependency-groups]
-dev = ["pydevd-pycharm~=253.29346.308", "pytest>=8.4.2"]
+dev = [
+    "diff-match-patch>=20241021",
+    "pydevd-pycharm~=253.29346.308",
+    "pytest>=8.4.2",
+    "rapidfuzz>=3.14.3",
+    "tqdm>=4.67.1",
+    "jiwer>=3.0",
+    "pyyaml>=6.0",
+    "marimo[recommended]>=0.19.7",
+]
