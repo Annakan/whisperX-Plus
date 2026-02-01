@@ -1,12 +1,14 @@
 from __future__ import annotations
 
+import contextlib
 import itertools
 import json
 import random
 import shutil
+import sys
 import time
 from pathlib import Path
-from typing import Any, Iterator
+from typing import IO, Any, Iterator
 
 from evaluator.models import RunPlan, SourceFiles, TranscriptionParams
 
@@ -158,6 +160,41 @@ def generate_command_file(
     return cmd_file
 
 
+def _run_with_output_capture(
+    func: Any,
+    params: Any,
+    audio_files: list[str],
+    output_dir: Path,
+) -> None:
+    """
+    Run a function while capturing stdout/stderr to a log file.
+
+    Args:
+        func: The transcription function to call
+        params: TranscribeParams to pass
+        audio_files: List of audio file paths
+        output_dir: Directory to save the out.log file
+    """
+    log_file = output_dir / "out.log"
+
+    with log_file.open("a", encoding="utf-8") as log:
+        log.write(f"\n{'='*60}\n")
+        log.write(f"Transcription started at {time.strftime('%Y-%m-%d %H:%M:%S')}\n")
+        log.write(f"{'='*60}\n\n")
+        log.flush()
+
+        old_stdout = sys.stdout
+        old_stderr = sys.stderr
+
+        try:
+            sys.stdout = log
+            sys.stderr = log
+            func(params, audio_files)
+        finally:
+            sys.stdout = old_stdout
+            sys.stderr = old_stderr
+
+
 def run_transcription(
     audio_path: Path,
     output_dir: Path,
@@ -204,22 +241,38 @@ def run_transcription(
         )
     )
 
+    def write_run_metadata(runtime: float, error: str | None) -> None:
+        """Write transcriber run metadata to file."""
+        metadata = {
+            "runtime_seconds": runtime,
+            "timestamp": time.strftime("%Y-%m-%dT%H:%M:%S"),
+            "audio_file": audio_path.name,
+            "error": error,
+        }
+        metadata_file = output_dir / "transcriber_run.metadata"
+        metadata_file.write_text(json.dumps(metadata, indent=2), encoding="utf-8")
+
     try:
         transcribe_params = TranscribeParams(**merged_args)
         start_time = time.time()
-        whisperx_transcribe(transcribe_params, [str(audio_path)])
+        _run_with_output_capture(whisperx_transcribe, transcribe_params, [str(audio_path)], output_dir)
         runtime = time.time() - start_time
 
         json_files = list(output_dir.glob("*.json"))
-        json_files = [f for f in json_files if f.name != "params.json"]
+        json_files = [f for f in json_files if f.name not in ("params.json", "transcriber_run.metadata")]
 
         if json_files:
+            write_run_metadata(runtime, None)
             return json_files[0], runtime, None
         else:
-            return None, 0.0, "No transcript JSON output generated"
+            error_msg = "No transcript JSON output generated"
+            write_run_metadata(0.0, error_msg)
+            return None, 0.0, error_msg
 
     except Exception as e:
-        return None, 0.0, str(e)
+        error_msg = str(e)
+        write_run_metadata(0.0, error_msg)
+        return None, 0.0, error_msg
 
 
 def check_variation_complete(variation_dir: Path) -> bool:

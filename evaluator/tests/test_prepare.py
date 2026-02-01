@@ -4,6 +4,7 @@ import pytest
 
 from evaluator.models import Segment
 from evaluator.prepare import (
+    merge_consecutive_speakers,
     normalize_text,
     prepare,
     prepare_all_variants,
@@ -14,12 +15,64 @@ from evaluator.prepare import (
 )
 
 
+class TestMergeConsecutiveSpeakers:
+    def test_empty_list(self):
+        assert merge_consecutive_speakers([]) == []
+
+    def test_single_segment(self):
+        segments = [Segment(locuteur="A", text="Hello")]
+        result = merge_consecutive_speakers(segments)
+        assert len(result) == 1
+        assert result[0].text == "Hello"
+
+    def test_different_speakers_not_merged(self):
+        segments = [
+            Segment(locuteur="A", text="Hello"),
+            Segment(locuteur="B", text="World"),
+        ]
+        result = merge_consecutive_speakers(segments)
+        assert len(result) == 2
+
+    def test_same_speaker_merged(self):
+        segments = [
+            Segment(locuteur="A", text="Hello"),
+            Segment(locuteur="A", text="World"),
+        ]
+        result = merge_consecutive_speakers(segments)
+        assert len(result) == 1
+        assert result[0].locuteur == "A"
+        assert result[0].text == "Hello World"
+
+    def test_multiple_consecutive_merged(self):
+        segments = [
+            Segment(locuteur="A", text="One"),
+            Segment(locuteur="A", text="Two"),
+            Segment(locuteur="A", text="Three"),
+            Segment(locuteur="B", text="Four"),
+        ]
+        result = merge_consecutive_speakers(segments)
+        assert len(result) == 2
+        assert result[0].text == "One Two Three"
+        assert result[1].text == "Four"
+
+    def test_alternating_speakers(self):
+        segments = [
+            Segment(locuteur="A", text="One"),
+            Segment(locuteur="B", text="Two"),
+            Segment(locuteur="A", text="Three"),
+        ]
+        result = merge_consecutive_speakers(segments)
+        assert len(result) == 3
+
+
 class TestNormalizeText:
     def test_lowercase(self):
         assert normalize_text("HELLO WORLD") == "hello world"
 
-    def test_remove_punctuation(self):
+    def test_replace_punctuation_with_space(self):
         assert normalize_text("Hello, world!") == "hello world"
+        assert normalize_text("don't") == "don t"
+        assert normalize_text("well...okay") == "well okay"
 
     def test_remove_accents(self):
         assert normalize_text("présidente") == "presidente"

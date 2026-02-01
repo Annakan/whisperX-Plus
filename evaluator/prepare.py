@@ -6,6 +6,36 @@ import unicodedata
 from evaluator.models import Segment
 
 
+def merge_consecutive_speakers(segments: list[Segment]) -> list[Segment]:
+    """
+    Merge consecutive segments with the same speaker.
+
+    Args:
+        segments: List of Segment objects
+
+    Returns:
+        List of Segment objects with consecutive same-speaker segments merged
+    """
+    if not segments:
+        return []
+
+    merged: list[Segment] = []
+    current = segments[0]
+
+    for segment in segments[1:]:
+        if segment.locuteur == current.locuteur:
+            current = Segment(
+                locuteur=current.locuteur,
+                text=f"{current.text} {segment.text}",
+            )
+        else:
+            merged.append(current)
+            current = segment
+
+    merged.append(current)
+    return merged
+
+
 def prepare(
     segments: list[Segment],
     with_locuteur: bool = True,
@@ -45,15 +75,16 @@ def prepare(
 
 def normalize_text(text: str) -> str:
     """
-    Normalize text by lowercasing and removing punctuation.
+    Normalize text by lowercasing and replacing punctuation with spaces.
 
-    Preserves spaces between words but removes extra whitespace.
+    Replaces punctuation with spaces for readability, then collapses
+    multiple spaces into one.
 
     Args:
         text: Input text string
 
     Returns:
-        Normalized text (lowercase, no punctuation)
+        Normalized text (lowercase, punctuation replaced with spaces)
     """
     text = text.lower()
 
@@ -61,7 +92,7 @@ def normalize_text(text: str) -> str:
     text = "".join(c for c in normalized if unicodedata.category(c) != "Mn")
     text = unicodedata.normalize("NFC", text)
 
-    text = re.sub(r"[^\w\s]", "", text)
+    text = re.sub(r"[^\w\s]", " ", text)
 
     text = re.sub(r"\s+", " ", text).strip()
 
@@ -100,7 +131,10 @@ def prepare_all_variants(segments: list[Segment]) -> dict[str, str]:
     """
     Generate all four text variants from segments.
 
+    Merges consecutive segments with the same speaker before generating variants.
+
     Returns:
         Dict mapping variant name (VA, VB, VC, VD) to prepared text
     """
-    return {name: func(segments) for name, func in VARIANTS.items()}
+    merged = merge_consecutive_speakers(segments)
+    return {name: func(merged) for name, func in VARIANTS.items()}
